@@ -387,6 +387,6 @@ Released under the **MIT License**.
 
 <div align="center">
 
-⭐ If this repository helped you, please give it a star!
+ If this repository helped you, please give it a star!
 
 </div>
