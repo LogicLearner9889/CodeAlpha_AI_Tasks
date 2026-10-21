@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <title>FAQ Assistant</title>
+
+  <!-- Bootstrap 5 (reset + utilities). If the CDN is blocked, style.css still lays out the page. -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+        crossorigin="anonymous">
+  <link rel="stylesheet" href="{{ url_for('static', filename='CSS/style.css') }}">
+</head>
+<body>
+  <div id="banner" class="net-banner" role="status" hidden>
+    You are offline. Messages will send once your connection is back.
+  </div>
+
+  <main class="chat-shell">
+    <section class="chat" aria-label="FAQ chat">
+      <header class="chat-head">
+        <span id="status-dot" class="status-dot" aria-hidden="true"></span>
+        <div>
+          <h1>FAQ Assistant</h1>
+          <div class="sub"><span id="status-text">Online</span> &middot; answers in seconds</div>
+        </div>
+        <button id="clear" type="button" class="icon-btn">Clear chat</button>
+      </header>
+
+      <div id="log" role="log" aria-live="polite" aria-relevant="additions"></div>
+
+      <div id="chips" class="chips" aria-label="Suggested questions">
+        <button type="button" class="pill" data-q="How can I track my order?">Track my order</button>
+        <button type="button" class="pill" data-q="What is your return policy?">Return policy</button>
+        <button type="button" class="pill" data-q="What payment methods do you accept?">Payment methods</button>
+        <button type="button" class="pill" data-q="Do you ship to the United States?">International shipping</button>
+        <button type="button" class="pill" data-q="How do I contact customer support?">Contact support</button>
+      </div>
+
+      <form id="form" class="composer" autocomplete="off" novalidate>
+        <div class="row-inner">
+          <label for="input" class="visually-hidden">Your question</label>
+          <textarea id="input" rows="1" maxlength="2000"
+                    placeholder="Type your question..." enterkeyhint="send"></textarea>
+          <button id="send" type="submit" disabled>Send</button>
+        </div>
+        <div id="counter" class="counter" aria-live="off">0 / 2000</div>
+      </form>
+    </section>
+  </main>
+
+  {% if startup_error %}
+  <span data-startup-error hidden>Chatbot unavailable: {{ startup_error }}</span>
+  {% endif %}
+
+  <noscript>
+    <p style="text-align:center;padding:16px">This chat needs JavaScript. Please enable it and reload.</p>
+  </noscript>
+
+  <script src="{{ url_for('static', filename='JS/chat.js') }}" defer></script>
+</body>
+</html>

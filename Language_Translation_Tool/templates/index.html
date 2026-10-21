@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Translator</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Noto+Sans:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Apply the saved (or system) theme before the page paints, so there is no flash -->
+  <script>
+    try {
+      const saved = localStorage.getItem("theme");
+      const dark = saved ? saved === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      if (dark) document.documentElement.classList.add("dark");
+    } catch (e) { /* storage blocked: fall back to light */ }
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Bricolage Grotesque"', "system-ui", "sans-serif"],
+            sans: ['"Noto Sans"', '"Noto Sans Bengali"', '"Noto Sans Devanagari"', "system-ui", "sans-serif"],
+          },
+          colors: {
+            ink: { DEFAULT: "#141B34", night: "#0A0F1E" },
+            brand: { DEFAULT: "#3B4BFF", soft: "#8A94FF" },
+          },
+          keyframes: {
+            marquee:    { "0%": { transform: "translateX(0)" },    "100%": { transform: "translateX(-50%)" } },
+            marqueeRev: { "0%": { transform: "translateX(-50%)" }, "100%": { transform: "translateX(0)" } },
+            rise:   { "0%": { opacity: 0, transform: "translateY(24px)" }, "100%": { opacity: 1, transform: "translateY(0)" } },
+            fade:   { "0%": { opacity: 0 }, "100%": { opacity: 1 } },
+            reveal: { "0%": { opacity: 0, transform: "translateY(8px)", filter: "blur(6px)" },
+                      "100%": { opacity: 1, transform: "translateY(0)", filter: "blur(0)" } },
+            shake:  { "0%,100%": { transform: "translateX(0)" }, "25%": { transform: "translateX(-6px)" }, "75%": { transform: "translateX(6px)" } },
+          },
+          animation: {
+            marquee: "marquee 70s linear infinite",
+            "marquee-rev": "marqueeRev 90s linear infinite",
+            rise: "rise .7s cubic-bezier(.2,.8,.2,1) backwards",
+            fade: "fade .8s ease-out backwards",
+            reveal: "reveal .5s ease-out",
+            shake: "shake .35s ease-in-out",
+          },
+        },
+      },
+    };
+  </script>
+</head>
+
+<body class="min-h-screen bg-[#F1F4FB] font-sans text-ink antialiased transition-colors duration-300 dark:bg-ink-night dark:text-slate-100">
+
+  <!-- Background: soft glow + slow-drifting "hello" in many languages (decorative) -->
+  <div aria-hidden="true" class="pointer-events-none fixed -top-48 left-1/2 z-0 h-[36rem] w-[36rem] -translate-x-1/2 rounded-full bg-brand/20 blur-3xl dark:bg-brand/25"></div>
+  <div id="greetings" aria-hidden="true"
+       class="pointer-events-none fixed inset-0 z-0 select-none overflow-hidden [mask-image:linear-gradient(to_bottom,transparent,black_15%,black_85%,transparent)]"></div>
+
+  <main class="relative z-10 mx-auto max-w-5xl px-5 pb-16 pt-10 md:pt-16">
+
+    <header class="flex items-start justify-between gap-4">
+      <div>
+        <h1 class="animate-rise font-display text-4xl font-bold tracking-tight md:text-6xl">Translate anything, anywhere</h1>
+        <p class="mt-3 max-w-xl animate-rise text-slate-600 [animation-delay:.1s] dark:text-slate-400">
+          Type or paste text, pick two languages, then read the result or listen to it.
+        </p>
+      </div>
+      <button id="theme" type="button" aria-label="Switch light and dark theme" title="Switch theme"
+              class="grid h-11 w-11 shrink-0 animate-fade place-items-center rounded-full border border-slate-200 bg-white/80 text-slate-700 backdrop-blur transition hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-90 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+        <svg class="h-5 w-5 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        <svg class="hidden h-5 w-5 dark:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </header>
+
+    <div id="error" class="error mt-6 animate-shake rounded-2xl border border-red-300 bg-red-50 px-5 py-3.5 text-red-800 dark:border-red-400/30 dark:bg-red-950/60 dark:text-red-200" role="alert" hidden></div>
+
+    <div class="mt-8 grid items-stretch gap-3 md:grid-cols-[1fr_auto_1fr]">
+
+      <!-- Input panel -->
+      <section class="flex min-h-[18rem] animate-rise flex-col rounded-3xl border border-slate-200/80 bg-white/80 shadow-xl shadow-indigo-900/5 backdrop-blur-md transition [animation-delay:.2s] focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/15 dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
+        <div class="relative border-b border-slate-200/80 dark:border-white/10">
+          <label for="source" class="sr-only">From</label>
+          <select id="source"
+                  class="w-full cursor-pointer appearance-none rounded-t-3xl bg-transparent py-4 pl-5 pr-12 font-display text-lg font-semibold outline-none [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-white"></select>
+          <svg class="pointer-events-none absolute right-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <textarea id="input" placeholder="Type or paste text" maxlength="{{ max_chars }}" aria-label="Text to translate"
+                  class="min-h-[12rem] flex-1 resize-none bg-transparent p-5 text-xl leading-relaxed outline-none placeholder:text-slate-400 dark:placeholder:text-slate-500"></textarea>
+        <div class="flex min-h-[3.25rem] items-center justify-between px-5 pb-3 text-sm text-slate-500 dark:text-slate-400">
+          <span id="count">0 / {{ max_chars }}</span>
+          <button id="clear" type="button"
+                  class="rounded-full px-4 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-95 dark:text-slate-200 dark:hover:bg-white/10">Clear</button>
+        </div>
+      </section>
+
+      <!-- Swap -->
+      <button id="swap" type="button" aria-label="Swap languages" title="Swap languages"
+              class="grid h-12 w-12 animate-fade place-items-center self-center justify-self-center rounded-full border border-slate-200 bg-white text-xl text-brand shadow-lg transition-transform duration-500 [animation-delay:.45s] hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-90 rotate-90 hover:rotate-[270deg] md:rotate-0 md:hover:rotate-180 dark:border-white/10 dark:bg-slate-900">⇄</button>
+
+      <!-- Output panel -->
+      <section class="flex min-h-[18rem] animate-rise flex-col rounded-3xl border border-dashed border-slate-300 bg-white/60 shadow-xl shadow-indigo-900/5 backdrop-blur-md [animation-delay:.35s] dark:border-white/15 dark:bg-white/[0.03] dark:shadow-none">
+        <div class="relative border-b border-dashed border-slate-300 dark:border-white/15">
+          <label for="target" class="sr-only">To</label>
+          <select id="target"
+                  class="w-full cursor-pointer appearance-none rounded-t-3xl bg-transparent py-4 pl-5 pr-12 font-display text-lg font-semibold outline-none [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-white"></select>
+          <svg class="pointer-events-none absolute right-5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </div>
+        <div id="output" aria-live="polite" lang="en"
+             class="output min-h-[12rem] flex-1 break-words p-5 text-xl leading-relaxed [&.placeholder]:text-slate-400 dark:[&.placeholder]:text-slate-500">Your translation will appear here.</div>
+        <div class="flex min-h-[3.25rem] items-center justify-between px-5 pb-3 text-sm text-slate-500 dark:text-slate-400">
+          <span id="detected"></span>
+          <span class="flex gap-1">
+            <button id="speak" type="button" disabled
+                    class="rounded-full px-4 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-slate-200 dark:hover:bg-white/10 dark:disabled:hover:bg-transparent">Listen</button>
+            <button id="copy" type="button" disabled
+                    class="rounded-full px-4 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent dark:text-slate-200 dark:hover:bg-white/10 dark:disabled:hover:bg-transparent">Copy</button>
+          </span>
+        </div>
+      </section>
+    </div>
+
+    <!-- Keep the label text as the FIRST child: script.js changes it while translating -->
+    <button id="translate" type="button"
+            class="relative mt-6 w-full animate-rise overflow-hidden rounded-2xl bg-brand px-6 py-4 font-display text-lg font-semibold text-white shadow-lg shadow-brand/30 transition [animation-delay:.5s] before:absolute before:inset-0 before:-translate-x-full before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent before:transition-transform before:duration-700 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand/40 hover:before:translate-x-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/40 active:translate-y-0 active:scale-[.99] disabled:cursor-progress disabled:animate-pulse">Translate <kbd class="ml-3 hidden rounded-md bg-white/20 px-2 py-0.5 font-sans text-xs font-medium md:inline">Ctrl + Enter</kbd></button>
+  </main>
+
+  <script src="{{ url_for('static', filename='JS/script.js') }}"></script>
+
+  <script>
+    // 1) Theme toggle
+    document.getElementById("theme").addEventListener("click", () => {
+      const dark = document.documentElement.classList.toggle("dark");
+      try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+    });
+
+    // 2) Background: outlined greetings drifting in opposite directions
+    const words = ["Hello", "নমস্কার", "Bonjour", "こんにちは", "Hola", "नमस्ते", "안녕하세요", "Ciao", "مرحبا", "Привет", "Olá", "Merhaba"];
+    const rows = [{ top: "2%", rev: false, shift: 0 }, { top: "34%", rev: true, shift: 4 }, { top: "66%", rev: false, shift: 8 }];
+    const layer = document.getElementById("greetings");
+    rows.forEach((r) => {
+      const seq = words.slice(r.shift).concat(words.slice(0, r.shift));
+      const row = document.createElement("div");
+      row.className =
+        "absolute left-0 flex w-max whitespace-nowrap font-display text-[7rem] leading-none text-transparent md:text-[11rem] " +
+        "[-webkit-text-stroke:1.5px_rgba(59,75,255,0.22)] dark:[-webkit-text-stroke:1.5px_rgba(138,148,255,0.2)] motion-reduce:animate-none " +
+        (r.rev ? "animate-marquee-rev" : "animate-marquee");
+      row.style.top = r.top;
+      row.innerHTML = [...seq, ...seq].map((w) => `<span class="pr-20">${w}</span>`).join("");
+      layer.appendChild(row);
+    });
+
+    // 3) Fade the translation in whenever new text arrives
+    const out = document.getElementById("output");
+    new MutationObserver(() => {
+      out.classList.remove("animate-reveal");
+      void out.offsetWidth; // restart the animation
+      out.classList.add("animate-reveal");
+    }).observe(out, { childList: true, characterData: true, subtree: true });
+  </script>
+</body>
+</html>
